@@ -19,7 +19,9 @@ for key, item in data.items():
     except (TypeError, ValueError): lat=lon=None
     db.execute("INSERT INTO stations VALUES (?,?,?,?)",(int(key),item.get('name') or 'بدون نام',lat,lon))
 lines = sorted({int(p['line']) for s in data.values() for p in s.get('positions',[])})
-for line in lines: db.execute("INSERT INTO routes VALUES (?,?,?,?)",(line,str(line),f'خط {line}','regular'))
+for line in lines:
+    mode = 'brt' if 101 <= line <= 110 or 121 <= line <= 171 else 'regular'
+    db.execute("INSERT INTO routes VALUES (?,?,?,?)",(line,str(line),f'خط {line}',mode))
 groups={}
 for key,item in data.items():
     for pos in item.get('positions',[]):

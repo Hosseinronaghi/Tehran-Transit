@@ -50,12 +50,18 @@ def main():
                     'osm_id':el['id']}))
         else:
             pt=el if 'lat' in el else (el.get('center') or {})
+            if ('lat' not in pt or 'lon' not in pt) and el.get('geometry'):
+                vertices=el['geometry']
+                pt={'lat':sum(p['lat'] for p in vertices)/len(vertices),
+                    'lon':sum(p['lon'] for p in vertices)/len(vertices)}
             if 'lat' not in pt or 'lon' not in pt: continue
             key=(typ,round(pt['lat'],6),round(pt['lon'],6))
             if key in seen: continue
             seen.add(key)
             features.append(feature({'type':'Point','coordinates':[pt['lon'],pt['lat']]},{
                 'id':ident,'mode':typ,'kind':'station','name':name(tags),'osm_id':el['id']}))
+    if not features:
+        raise RuntimeError('No metro/BRT geometry returned; refusing to package an empty transit map')
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     OUTPUT.write_text(json.dumps({'type':'FeatureCollection','features':features},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(f'OSM: {len(elements)} elements, {len(features)} features -> {OUTPUT}')

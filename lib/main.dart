@@ -34,7 +34,7 @@ class _TransitScreenState extends State<TransitScreen> {
   List<Map<String, Object?>> stations = [];
   List<LatLng> selected = [];
   int? selectedRoute;
-  String direction = 'forward';
+  String direction = 'outbound';
   bool showRoutes = true;
   String? error;
 
@@ -85,7 +85,7 @@ class _TransitScreenState extends State<TransitScreen> {
             ButtonSegment(value: false, label: Text('ایستگاه‌ها'), icon: Icon(Icons.place)),
           ], selected: {showRoutes}, onSelectionChanged: (v) { setState(() { showRoutes=v.first; }); load(); }),
           if (selectedRoute != null) Padding(padding: const EdgeInsets.all(6), child: SegmentedButton<String>(
-            segments: const [ButtonSegment(value: 'forward', label: Text('رفت')), ButtonSegment(value: 'backward', label: Text('برگشت'))],
+            segments: const [ButtonSegment(value: 'outbound', label: Text('رفت')), ButtonSegment(value: 'inbound', label: Text('برگشت'))],
             selected: {direction}, onSelectionChanged: (v) { direction=v.first; chooseRoute(selectedRoute!); },
           )),
           Expanded(flex: 3, child: FlutterMap(

@@ -100,7 +100,7 @@ class _TransitScreenState extends State<TransitScreen> {
     if (mounted) setState(() {});
     if (selected.isNotEmpty) map.move(selected.first,12);
   }
-  void stationDetails(TransitFeature f) {
+  Future<void> stationDetails(TransitFeature f) async {
     final center=f.points.first;
     final nearby=<String>[];
     for (final other in osm) {
@@ -109,7 +109,18 @@ class _TransitScreenState extends State<TransitScreen> {
         nearby.add('${other.mode=='metro'?'مترو':'BRT'}: ${other.name} (${distance.as(LengthUnit.Meter,center,other.points.first).round()} متر هوایی)');
       }
     }
-    showModalBottomSheet(context:context,showDragHandle:true,builder:(ctx)=>SafeArea(child:Padding(
+    if (db != null) {
+      final busStops=await db!.rawQuery(
+        'SELECT name_fa,latitude,longitude FROM stations WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ? LIMIT 500',
+        [center.latitude-0.005,center.latitude+0.005,center.longitude-0.006,center.longitude+0.006]);
+      for (final stop in busStops) {
+        final p=LatLng((stop['latitude'] as num).toDouble(),(stop['longitude'] as num).toDouble());
+        final meters=distance.as(LengthUnit.Meter,center,p).round();
+        if (meters<=400) nearby.add('اتوبوس: ${stop['name_fa']} ($meters متر هوایی)');
+      }
+    }
+    if (!mounted) return;
+    showModalBottomSheet(context:context,showDragHandle:true,isScrollControlled:true,builder:(ctx)=>SafeArea(child:Padding(
       padding:const EdgeInsets.all(20),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(f.name,style:Theme.of(ctx).textTheme.titleLarge),
         const SizedBox(height:12),
@@ -129,6 +140,8 @@ class _TransitScreenState extends State<TransitScreen> {
   }
   @override void dispose() { search.dispose(); map.dispose(); db?.close(); super.dispose(); }
   @override Widget build(BuildContext context) {
+    final matchingOsm = search.text.trim().isEmpty ? <TransitFeature>[] :
+      osm.where((f)=>f.kind=='station' && f.name.toLowerCase().contains(search.text.trim().toLowerCase())).take(20).toList();
     final osmLines=osm.where((f)=>f.kind=='route' && visible(f.mode) && f.points.length>1).toList();
     final osmStations=osm.where((f)=>f.kind=='station' && visible(f.mode)).toList();
     final transferPoints=<LatLng>[];
@@ -188,9 +201,19 @@ class _TransitScreenState extends State<TransitScreen> {
             ButtonSegment(value:'outbound',label:Text('رفت')),ButtonSegment(value:'inbound',label:Text('برگشت'))
           ],selected:{direction},onSelectionChanged:(v){direction=v.first;chooseRoute(selectedRoute!);}),
           Expanded(flex:2,child:ListView.builder(
-            itemCount:showRoutes?routes.length:stations.length,
+            itemCount:matchingOsm.length + (showRoutes?routes.length:stations.length),
             itemBuilder:(context,i) {
-              final row=showRoutes?routes[i]:stations[i];
+              if (i<matchingOsm.length) {
+                final station=matchingOsm[i];
+                return ListTile(dense:true,
+                  leading:Icon(station.mode=='metro'?Icons.train:Icons.directions_bus,
+                    color:station.mode=='metro'?Colors.blue:Colors.red),
+                  title:Text(station.name),
+                  subtitle:Text(station.mode=='metro'?'مترو':'BRT'),
+                  trailing:const Icon(Icons.chevron_left),
+                  onTap:(){map.move(station.points.first,15);stationDetails(station);});
+              }
+              final row=showRoutes?routes[i-matchingOsm.length]:stations[i-matchingOsm.length];
               return ListTile(dense:true,leading:Icon(showRoutes?Icons.directions_bus:Icons.place_outlined),
                 title:Text(showRoutes?'خط ${row['route_code']} — ${row['name_fa']}':'${row['name_fa']}'),trailing:const Icon(Icons.chevron_left),
                 onTap:(){

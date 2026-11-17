@@ -78,7 +78,7 @@ class _TransitScreenState extends State<TransitScreen> {
   }
   Future<void> load() async {
     if (db==null) return;
-    final q='%\${search.text.trim()}%';
+    final q='%${search.text.trim()}%';
     if (showRoutes) {
       routes=await db!.rawQuery('SELECT id,route_code,name_fa,mode FROM routes WHERE route_code LIKE ? OR name_fa LIKE ? ORDER BY CAST(route_code AS INTEGER) LIMIT 300',[q,q]);
     } else {

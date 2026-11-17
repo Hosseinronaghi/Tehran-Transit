@@ -10,14 +10,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 void main() { WidgetsFlutterBinding.ensureInitialized(); runApp(const TehranTransit()); }
-class TehranTransit extends StatelessWidget {
+class TehranTransit extends StatefulWidget {
   const TehranTransit({super.key});
+  @override State<TehranTransit> createState() => _TehranTransitState();
+}
+class _TehranTransitState extends State<TehranTransit> {
+  ThemeMode mode = ThemeMode.system;
   @override Widget build(BuildContext context) => MaterialApp(
     title: 'تهران ترانزیت', debugShowCheckedModeBanner: false,
     locale: const Locale('fa', 'IR'), supportedLocales: const [Locale('fa','IR')],
     localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
-    theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xff087c83)),
-    home: const TransitScreen());
+    themeMode: mode,
+    theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xff087c83), scaffoldBackgroundColor: const Color(0xfff5f8f9)),
+    darkTheme: ThemeData(useMaterial3: true, brightness: Brightness.dark, colorSchemeSeed: const Color(0xff5dd3cc)),
+    home: TransitScreen(onToggleTheme: () => setState(() => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)));
 }
 class TransitFeature {
   final String mode, kind, name, ref, colour;
@@ -25,7 +31,8 @@ class TransitFeature {
   TransitFeature(this.mode,this.kind,this.name,this.ref,this.colour,this.points);
 }
 class TransitScreen extends StatefulWidget {
-  const TransitScreen({super.key});
+  final VoidCallback onToggleTheme;
+  const TransitScreen({super.key, required this.onToggleTheme});
   @override State<TransitScreen> createState() => _TransitScreenState();
 }
 class _TransitScreenState extends State<TransitScreen> {
@@ -133,7 +140,8 @@ class _TransitScreenState extends State<TransitScreen> {
       }
     }
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:const Text('تهران ترانزیت'),centerTitle:true,actions:[
+      appBar:AppBar(title:const Text('تهران ترانزیت'),centerTitle:false,actions:[
+        IconButton(tooltip:'تغییر تم',icon:const Icon(Icons.dark_mode_outlined),onPressed:widget.onToggleTheme),
         IconButton(icon:const Icon(Icons.info_outline),onPressed:()=>showAboutDialog(context:context,
           applicationName:'تهران ترانزیت',children:[const Text('نسخه آزمایشی ۰.۲. داده‌های OSM ممکن است ناقص یا قدیمی باشند. مسیر اتوبوس عادی شماتیک است؛ نقاط تبادل بر اساس فاصله هوایی محاسبه می‌شوند.')]))
       ]),
@@ -141,13 +149,13 @@ class _TransitScreenState extends State<TransitScreen> {
         const Center(child:CircularProgressIndicator()):
         Column(children:[
           SingleChildScrollView(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:8),child:Row(children:[
-            FilterChip(label:const Text('مترو'),selected:metro,onSelected:(v)=>setState(()=>metro=v)),
+            FilterChip(avatar:const Icon(Icons.train,size:18),label:const Text('مترو'),selected:metro,onSelected:(v)=>setState(()=>metro=v)),
             const SizedBox(width:6),
-            FilterChip(label:const Text('BRT'),selected:brt,onSelected:(v)=>setState(()=>brt=v)),
+            FilterChip(avatar:const Icon(Icons.directions_bus_filled,size:18),label:const Text('BRT'),selected:brt,onSelected:(v)=>setState(()=>brt=v)),
             const SizedBox(width:6),
-            FilterChip(label:const Text('اتوبوس'),selected:bus,onSelected:(v)=>setState(()=>bus=v)),
+            FilterChip(avatar:const Icon(Icons.directions_bus,size:18),label:const Text('اتوبوس'),selected:bus,onSelected:(v)=>setState(()=>bus=v)),
             const SizedBox(width:6),
-            FilterChip(label:const Text('تبادل'),selected:transfers,onSelected:(v)=>setState(()=>transfers=v)),
+            FilterChip(avatar:const Icon(Icons.hub,size:18),label:const Text('تبادل'),selected:transfers,onSelected:(v)=>setState(()=>transfers=v)),
           ])),
           Expanded(flex:3,child:FlutterMap(
             mapController:map,
@@ -171,7 +179,7 @@ class _TransitScreenState extends State<TransitScreen> {
             ],
           )),
           Padding(padding:const EdgeInsets.fromLTRB(10,6,10,4),child:TextField(controller:search,onChanged:(_)=>load(),
-            decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'جست‌وجوی خط یا ایستگاه اتوبوس',isDense:true,border:OutlineInputBorder(borderRadius:BorderRadius.circular(12))))),
+            decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'کدام خط یا ایستگاه را می‌خواهید؟',isDense:true,filled:true,fillColor:Theme.of(context).colorScheme.surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)))),
           SegmentedButton<bool>(segments:const [
             ButtonSegment(value:true,label:Text('خطوط اتوبوس')),
             ButtonSegment(value:false,label:Text('ایستگاه‌های اتوبوس')),
@@ -184,7 +192,7 @@ class _TransitScreenState extends State<TransitScreen> {
             itemBuilder:(context,i) {
               final row=showRoutes?routes[i]:stations[i];
               return ListTile(dense:true,leading:Icon(showRoutes?Icons.directions_bus:Icons.place_outlined),
-                title:Text(showRoutes?'خط ${row['route_code']} — ${row['name_fa']}':'${row['name_fa']}'),
+                title:Text(showRoutes?'خط ${row['route_code']} — ${row['name_fa']}':'${row['name_fa']}'),trailing:const Icon(Icons.chevron_left),
                 onTap:(){
                   if (showRoutes) {chooseRoute(row['id'] as int);}
                   else {

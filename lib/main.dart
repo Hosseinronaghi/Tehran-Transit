@@ -16,7 +16,7 @@ class TehranTransit extends StatelessWidget {
     title: 'تهران ترانزیت', debugShowCheckedModeBanner: false,
     locale: const Locale('fa', 'IR'),
     supportedLocales: const [Locale('fa', 'IR')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xff087c83)),
     home: const TransitScreen(),
   );

@@ -20,6 +20,8 @@ jobs:
           PY
       - name: Generate offline SQLite database
         run: python3 scripts/build_database.py stations.json assets/data/transit.sqlite
+      - name: Fetch OSM metro and BRT map data
+        run: python3 scripts/fetch_osm_transit.py assets/data/rail_brt.geojson
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

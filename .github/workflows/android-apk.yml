@@ -8,18 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download upstream bus dataset
-        run: |
-          python3 - <<'PY'
-          import urllib.request, zipfile, io, pathlib
-          url = 'https://github.com/mosayeb-a/tehran-bus-data/archive/refs/heads/main.zip'
-          raw = urllib.request.urlopen(url, timeout=90).read()
-          with zipfile.ZipFile(io.BytesIO(raw)) as z:
-              name = next(n for n in z.namelist() if n.endswith('/data/stations.json'))
-              pathlib.Path('stations.json').write_bytes(z.read(name))
-          PY
       - name: Generate offline SQLite database
-        run: python3 scripts/build_database.py stations.json assets/data/transit.sqlite
+        run: python3 scripts/build_database.py assets/data/tehran_bus_stations.json assets/data/transit.sqlite
       - name: Check bundled metro and BRT map
         run: test -s assets/data/rail_brt.geojson
       - name: Validate generated transit data

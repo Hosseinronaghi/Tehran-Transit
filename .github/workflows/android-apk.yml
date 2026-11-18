@@ -46,8 +46,29 @@ jobs:
           flutter analyze --no-fatal-infos
       - name: Test route planner
         run: flutter test test/route_engine_test.dart
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build APK (retry transient Maven rate limiting)
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            log_file="$(mktemp)"
+            if flutter build apk --release 2>&1 | tee "$log_file"; then
+              rm -f "$log_file"
+              exit 0
+            fi
+            if ! grep -Eqi 'Too Many Requests|status code 429|Gradle threw an error while downloading artifacts|HTTP Error 5[0-9][0-9]' "$log_file"; then
+              echo "::error::Non-network build failure; not retrying"
+              rm -f "$log_file"
+              exit 1
+            fi
+            rm -f "$log_file"
+            if [ "$attempt" = 3 ]; then
+              echo "::error::Gradle downloads still failing after retries"
+              exit 1
+            fi
+            echo "::warning::Temporary Maven/Gradle download failure on attempt $attempt"
+            sleep $((attempt * 30))
+          done
       - name: Verify APK exists
         run: |
           test -s build/app/outputs/flutter-apk/app-release.apk

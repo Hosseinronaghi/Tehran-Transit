@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'offline_map.dart';
 import 'raha_colors.dart';
@@ -23,10 +24,16 @@ class RahaSettingsPage extends StatefulWidget {
 class _RahaSettingsPageState extends State<RahaSettingsPage> {
   bool quarterlyReminder = true;
   late ThemeMode selectedTheme;
+  PackageInfo? packageInfo;
   @override
   void initState() {
     super.initState();
     selectedTheme = widget.themeMode;
+    PackageInfo.fromPlatform().then((value) {
+      if (mounted) setState(() => packageInfo = value);
+    }).catchError((Object error) {
+      // Device metadata may be unavailable in preview/test environments.
+    });
     widget.offlineMap.addListener(_refresh);
     widget.colors.addListener(_refresh);
     _readPrefs();
@@ -394,6 +401,42 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                 'اما تا اتصال منبع برنامه زمان‌بندی معتبر، '
                 'زمانی به‌صورت ساختگی نمایش داده نمی‌شود.',
               ),
+            ),
+          ),
+          _heading('درباره رها تهران'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.info_outline_rounded),
+                  title: const Text('درباره برنامه'),
+                  subtitle: Text(packageInfo == null
+                      ? 'رها تهران · اطلاعات نسخه'
+                      : 'نسخه ' + persianDigits(packageInfo!.version) +
+                          ' · ساخت ' +
+                          persianDigits(packageInfo!.buildNumber)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => showAboutDialog(
+                    context: context,
+                    applicationName: 'رها تهران',
+                    applicationVersion: packageInfo == null
+                        ? null
+                        : persianDigits(packageInfo!.version) +
+                            ' (ساخت ' +
+                            persianDigits(packageInfo!.buildNumber) + ')',
+                    applicationLegalese: '© OpenStreetMap contributors · ODbL',
+                    children: const [
+                      Text(
+                        'اطلاعات مترو و BRT و اتوبوس از داده‌های '
+                        'متن‌باز تهیه شده است. مسیرها شماتیک و '
+                        'زمان‌های سفر تقریبی‌اند. برای نمایش نقشه '
+                        'خیابان‌های تهران بدون اینترنت، دانلود '
+                        'اختیاری نقشه در تنظیمات را انتخاب کنید.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           _heading('نسخه و سازگاری'),

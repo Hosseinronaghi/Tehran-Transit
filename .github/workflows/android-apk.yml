@@ -38,9 +38,8 @@ jobs:
           text=path.read_text()
           permission='<uses-permission android:name="android.permission.INTERNET" />'
           if permission not in text:
-              text=text.replace('<manifest ', '<manifest ', 1)
               at=text.index('>')
-              text=text[:at+1]+'\\n    '+permission+text[at+1:]
+              text=text[:at+1]+chr(10)+'    '+permission+text[at+1:]
               path.write_text(text)
           PY
       - name: Install dependencies

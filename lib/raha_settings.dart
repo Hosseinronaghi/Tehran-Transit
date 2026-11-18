@@ -415,7 +415,7 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                       : 'نسخه ' + persianDigits(packageInfo!.version) +
                           ' · ساخت ' +
                           persianDigits(packageInfo!.buildNumber)),
-                  trailing: const Icon(Icons.chevron_left),
+                  trailing: const Icon(Icons.chevron_right, textDirection: TextDirection.rtl),
                   onTap: () => showAboutDialog(
                     context: context,
                     applicationName: 'رها تهران',

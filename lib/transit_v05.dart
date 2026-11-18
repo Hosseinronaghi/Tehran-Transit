@@ -41,7 +41,7 @@ class _TehranTransitState extends State<TehranTransit> {
       fontFamily: 'Vazir',
     );
     return MaterialApp(
-      title: 'تهران ترانزیت',
+      title: 'رها تهران',
       debugShowCheckedModeBanner: false,
       locale: const Locale('fa', 'IR'),
       supportedLocales: const [Locale('fa', 'IR')],
@@ -740,7 +740,7 @@ class _TransitHomeState extends State<TransitHome> {
     final graph = network;
     if (graph == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('تهران ترانزیت')),
+        appBar: AppBar(title: const Text('رها تهران')),
         body: Center(
           child: error == null
               ? const CircularProgressIndicator()
@@ -771,7 +771,7 @@ class _TransitHomeState extends State<TransitHome> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تهران ترانزیت'),
+          title: const Text('رها تهران'),
           actions: [
             IconButton(
               tooltip: 'حالت روشن یا تاریک',
@@ -782,7 +782,7 @@ class _TransitHomeState extends State<TransitHome> {
               tooltip: 'درباره داده‌های نقشه',
               onPressed: () => showAboutDialog(
                 context: context,
-                applicationName: 'تهران ترانزیت',
+                applicationName: 'رها تهران',
                 children: const [
                   Text(
                     'نسخه آزمایشی ۰.۵. مسیرها و فاصله‌ها شماتیک و '

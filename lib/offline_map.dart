@@ -179,17 +179,31 @@ class OfflineMapController extends ChangeNotifier {
         throw const FormatException('اثر انگشت SHA256 نقشه مطابقت ندارد.');
       }
       await _check(partial);
+      // Keep the last known-good pack until the new provider opens.
+      final backup = File(destination.path + '.previous');
+      if (await backup.exists()) await backup.delete();
       final oldProvider = provider;
       provider = null;
       oldProvider?.dispose();
-      if (await destination.exists()) await destination.delete();
-      await partial.rename(destination.path);
-      final editionFile = File(destination.path + '.edition');
-      await editionFile.writeAsString(release.edition, flush: true);
-      provider = MbTilesTileProvider.fromPath(path: destination.path);
-      installedBytes = await destination.length();
-      installedAt = await destination.lastModified();
-      installedEdition = release.edition;
+      if (await destination.exists()) {
+        await destination.rename(backup.path);
+      }
+      try {
+        await partial.rename(destination.path);
+        provider = MbTilesTileProvider.fromPath(path: destination.path);
+        final editionFile = File(destination.path + '.edition');
+        await editionFile.writeAsString(release.edition, flush: true);
+        installedBytes = await destination.length();
+        installedAt = await destination.lastModified();
+        installedEdition = release.edition;
+        if (await backup.exists()) await backup.delete();
+      } catch (_) {
+        provider?.dispose();
+        provider = null;
+        if (await destination.exists()) await destination.delete();
+        if (await backup.exists()) await backup.rename(destination.path);
+        rethrow;
+      }
     } catch (e) {
       error = cancelled
           ? 'دانلود لغو شد.'

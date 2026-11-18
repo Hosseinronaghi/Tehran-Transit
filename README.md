@@ -16,7 +16,7 @@
 
 [GitHub Actions](../../actions) → **Build Android APK** → اجرای موفق → **Artifacts** → **tehran-transit-apk**.
 
-گردش‌کار، داده اتوبوس را از آرشیو [tehran-bus-data](https://github.com/mosayeb-a/tehran-bus-data) دریافت می‌کند و دیتابیس SQLite می‌سازد. ولی داده مترو و BRT در فایل `assets/data/rail_brt.geojson` داخل همین مخزن ثبت شده و برای تولید APK به سرویس Overpass وابسته نیست.
+گردش‌کار **بدون نیاز به دانلود داده حمل‌ونقل در زمان ساخت** اجرا می‌شود: دیتابیس اتوبوس از فایل ثابت `assets/data/tehran_bus_stations.json` تولید می‌شود و مترو/BRT از فایل ثابت `assets/data/rail_brt.geojson` بسته‌بندی می‌شوند. بنابراین قطعی Overpass یا آرشیو GitHub منبع، فرایند ساخت APK را مختل نمی‌کند؛ بااین‌حال Flutter و وابستگی‌های Android همچنان به زیرساخت دانلود ابزارها وابسته‌اند.
 
 ## محدودیت‌های مهم
 

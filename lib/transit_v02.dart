@@ -156,7 +156,7 @@ class _TransitScreenState extends State<TransitScreen> {
       appBar:AppBar(title:const Text('تهران ترانزیت'),centerTitle:false,actions:[
         IconButton(tooltip:'تغییر تم',icon:const Icon(Icons.dark_mode_outlined),onPressed:widget.onToggleTheme),
         IconButton(icon:const Icon(Icons.info_outline),onPressed:()=>showAboutDialog(context:context,
-          applicationName:'تهران ترانزیت',children:[const Text('نسخه آزمایشی ۰.۲. داده‌های OSM ممکن است ناقص یا قدیمی باشند. مسیر اتوبوس عادی شماتیک است؛ نقاط تبادل بر اساس فاصله هوایی محاسبه می‌شوند.')]))
+          applicationName:'تهران ترانزیت',children:[const Text('نسخه آزمایشی ۰.۴. نقشه مترو و BRT با داده‌های متن‌باز آفلاین ساخته شده است. خطوط مستقیم بین ایستگاه‌ها شماتیک هستند، نه هندسه واقعی ریل و خیابان. فاصله‌های تبادل هوایی و تقریبی‌اند. منابع: tehran-metro-data و tehran-bus-data (ODbL).')]))
       ]),
       body:error!=null?Center(child:Text('خطا: $error')):db==null?
         const Center(child:CircularProgressIndicator()):
@@ -191,6 +191,7 @@ class _TransitScreenState extends State<TransitScreen> {
               const RichAttributionWidget(attributions:[TextSourceAttribution('© OpenStreetMap contributors')]),
             ],
           )),
+          Padding(padding:const EdgeInsets.fromLTRB(12,0,12,0),child:Text('خطوط مترو و BRT شماتیک‌اند؛ مسیر دقیق ریل و خیابان نیستند.',style:TextStyle(fontSize:11,color:Theme.of(context).colorScheme.onSurfaceVariant))),
           Padding(padding:const EdgeInsets.fromLTRB(10,6,10,4),child:TextField(controller:search,onChanged:(_)=>load(),
             decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'کدام خط یا ایستگاه را می‌خواهید؟',isDense:true,filled:true,fillColor:Theme.of(context).colorScheme.surface,border:OutlineInputBorder(borderRadius:BorderRadius.circular(18),borderSide:BorderSide.none)))),
           SegmentedButton<bool>(segments:const [

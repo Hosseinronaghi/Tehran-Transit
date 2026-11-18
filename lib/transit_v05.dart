@@ -61,10 +61,10 @@ class _TehranTransitState extends State<TehranTransit> {
 }
 
 class _MapFeature {
-  final String mode, kind, name, line, color;
+  final String mode, kind, name, line, color, id;
   final List<LatLng> points;
   const _MapFeature(this.mode, this.kind, this.name, this.line,
-      this.color, this.points);
+      this.color, this.id, this.points);
 }
 
 class TransitHome extends StatefulWidget {
@@ -84,6 +84,7 @@ class _TransitHomeState extends State<TransitHome> {
   String? error;
   List<_MapFeature> features = [];
   List<TransitService> lines = [];
+  List<TransitStop> allStops = [];
   List<LatLng> selectedBusLine = [];
   TransitStop? selectedStop, origin, destination;
   TransitService? selectedService;
@@ -139,6 +140,7 @@ class _TransitHomeState extends State<TransitHome> {
               props['name'].toString(),
               props['ref']?.toString() ?? '',
               props['colour']?.toString() ?? '',
+              props['id']?.toString() ?? '',
               points,
             ));
           }
@@ -163,6 +165,14 @@ class _TransitHomeState extends State<TransitHome> {
         features = parsed;
         network = graph;
         lines = services;
+        allStops = graph.stops.values.toList()
+          ..sort((a, b) {
+            const priority = {'metro': 0, 'brt': 1, 'bus': 2};
+            final comparison = (priority[a.mode] ?? 9)
+                .compareTo(priority[b.mode] ?? 9);
+            if (comparison != 0) return comparison;
+            return a.name.compareTo(b.name);
+          });
       });
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
@@ -224,10 +234,9 @@ class _TransitHomeState extends State<TransitHome> {
       .trim();
 
   List<TransitStop> _matchingStops() {
-    final graph = network;
-    if (graph == null) return [];
+    if (network == null) return [];
     final term = _normalized(query.text);
-    return graph.stops.values.where((s) {
+    return allStops.where((s) {
       if (category != 'all' && category != s.mode) return false;
       if (term.isEmpty) return true;
       return _normalized(s.name).contains(term) ||
@@ -769,7 +778,9 @@ class _TransitHomeState extends State<TransitHome> {
                       strokeWidth: active ? 4.0 : 2.0,
                     );
                   }),
-                  if (bus && showLines && selectedBusLine.length > 1)
+                  if (selectedService != null &&
+                      _mapMode(selectedService!.mode) &&
+                      showLines && selectedBusLine.length > 1)
                     Polyline(
                       points: selectedBusLine,
                       color: const Color(0xff078969),
@@ -787,25 +798,15 @@ class _TransitHomeState extends State<TransitHome> {
               ),
               MarkerLayer(markers: [
                 ...stationFeatures.map((f) {
-                  final stopId = f.mode == 'metro'
-                      ? graph.stops.values
-                          .where((s) => s.mode == 'metro' &&
-                              s.point.latitude == f.points.first.latitude &&
-                              s.point.longitude == f.points.first.longitude)
-                          .map((s) => s.id)
-                          .firstOrNull
-                      : graph.stops.values
-                          .where((s) => s.mode == 'brt' &&
-                              distance.as(LengthUnit.Meter, s.point,
-                                  f.points.first) < 2)
-                          .map((s) => s.id)
-                          .firstOrNull;
+                  final stopId =
+                      (f.mode == 'metro' ? 'metro:' : 'bus:') + f.id;
+                  final stop = graph.stops[stopId];
                   return Marker(
                     point: f.points.first,
                     width: 34,
                     height: 34,
                     child: GestureDetector(
-                      onTap: stopId == null ? null : () => _pickStop(graph.stops[stopId]!),
+                      onTap: stop == null ? null : () => _pickStop(stop),
                       child: Icon(
                         _modeIcon(f.mode),
                         size: 24,
@@ -882,11 +883,11 @@ class _TransitHomeState extends State<TransitHome> {
             ),
           ),
           DraggableScrollableSheet(
-            initialChildSize: .36,
-            minChildSize: .22,
-            maxChildSize: .82,
+            initialChildSize: .45,
+            minChildSize: .39,
+            maxChildSize: .86,
             snap: true,
-            snapSizes: const [.36, .6],
+            snapSizes: const [.45, .7],
             builder: (context, scrollController) =>
                 _bottomPanel(scrollController),
           ),

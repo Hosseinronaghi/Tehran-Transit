@@ -50,6 +50,13 @@ jobs:
           text=re.sub(r'android:label="[^"]+"', 'android:label="رها تهران"', text, count=1)
           path.write_text(text)
           PY
+      - name: Configure stable Android signing (if secrets exist)
+        env:
+          RAHA_KEYSTORE_B64: ${{ secrets.RAHA_KEYSTORE_B64 }}
+          RAHA_STORE_PASSWORD: ${{ secrets.RAHA_STORE_PASSWORD }}
+          RAHA_KEY_ALIAS: ${{ secrets.RAHA_KEY_ALIAS }}
+          RAHA_KEY_PASSWORD: ${{ secrets.RAHA_KEY_PASSWORD }}
+        run: python3 scripts/configure_android_signing.py
       - name: Install dependencies
         run: flutter pub get
       - name: Format and analyze app
@@ -60,11 +67,22 @@ jobs:
         run: flutter test test/route_engine_test.dart
       - name: Build APK (retry transient Maven rate limiting)
         shell: bash
+        env:
+          RAHA_MAP_URL: ${{ vars.RAHA_MAP_URL }}
+          RAHA_MAP_SHA256: ${{ vars.RAHA_MAP_SHA256 }}
+          RAHA_MAP_EDITION: ${{ vars.RAHA_MAP_EDITION }}
+          RAHA_STORE_PASSWORD: ${{ secrets.RAHA_STORE_PASSWORD }}
+          RAHA_KEY_ALIAS: ${{ secrets.RAHA_KEY_ALIAS }}
+          RAHA_KEY_PASSWORD: ${{ secrets.RAHA_KEY_PASSWORD }}
         run: |
           set -o pipefail
           for attempt in 1 2 3; do
             log_file="$(mktemp)"
-            if flutter build apk --release 2>&1 | tee "$log_file"; then
+            if flutter build apk --release \
+              --dart-define="RAHA_MAP_URL=${RAHA_MAP_URL}" \
+              --dart-define="RAHA_MAP_SHA256=${RAHA_MAP_SHA256}" \
+              --dart-define="RAHA_MAP_EDITION=${RAHA_MAP_EDITION}" \
+              2>&1 | tee "$log_file"; then
               rm -f "$log_file"
               exit 0
             fi
@@ -90,4 +108,6 @@ jobs:
           name: tehran-transit-apk
           if-no-files-found: error
           retention-days: 30
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            APP_SIGNING.txt

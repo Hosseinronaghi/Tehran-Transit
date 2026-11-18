@@ -10,6 +10,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'offline_map.dart';
+import 'persian_digits.dart';
+import 'raha_settings.dart';
 
 import 'route_engine.dart';
 
@@ -26,6 +30,31 @@ class TehranTransit extends StatefulWidget {
 
 class _TehranTransitState extends State<TehranTransit> {
   ThemeMode mode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreTheme();
+  }
+
+  Future<void> _restoreTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString('raha_theme_mode');
+    if (!mounted) return;
+    setState(() {
+      mode = value == 'dark'
+          ? ThemeMode.dark
+          : value == 'light'
+              ? ThemeMode.light
+              : ThemeMode.system;
+    });
+  }
+
+  void _changeTheme(ThemeMode next) {
+    setState(() => mode = next);
+    SharedPreferences.getInstance().then((prefs) =>
+        prefs.setString('raha_theme_mode', next.name));
+  }
   @override
   Widget build(BuildContext context) {
     final light = ThemeData(
@@ -54,9 +83,10 @@ class _TehranTransitState extends State<TehranTransit> {
       darkTheme: dark,
       themeMode: mode,
       home: TransitHome(
-        onTheme: () => setState(() {
-          mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-        }),
+        onTheme: () => _changeTheme(
+            mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark),
+        themeMode: mode,
+        onThemeModeChanged: _changeTheme,
       ),
     );
   }
@@ -71,7 +101,14 @@ class _MapFeature {
 
 class TransitHome extends StatefulWidget {
   final VoidCallback onTheme;
-  const TransitHome({super.key, required this.onTheme});
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
+  const TransitHome({
+    super.key,
+    required this.onTheme,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
   @override
   State<TransitHome> createState() => _TransitHomeState();
 }
@@ -80,6 +117,7 @@ class _TransitHomeState extends State<TransitHome> {
   final MapController map = MapController();
   final TextEditingController query = TextEditingController();
   final Distance distance = const Distance();
+  final OfflineMapController offlineMap = OfflineMapController();
   Timer? moveDelay;
   Database? db;
   TransitNetwork? network;
@@ -103,7 +141,13 @@ class _TransitHomeState extends State<TransitHome> {
   @override
   void initState() {
     super.initState();
+    offlineMap.addListener(_mapChanged);
+    offlineMap.initialize();
     _load();
+  }
+
+  void _mapChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -228,7 +272,7 @@ class _TransitHomeState extends State<TransitHome> {
     });
   }
 
-  String _normalized(String text) => text
+  String _normalized(String text) => asciiDigits(text)
       .toLowerCase()
       .replaceAll('ي', 'ی')
       .replaceAll('ك', 'ک')
@@ -387,7 +431,7 @@ class _TransitHomeState extends State<TransitHome> {
                       return ActionChip(
                         avatar: Icon(_modeIcon(svc?.mode ?? stop.mode),
                             size: 18),
-                        label: Text(svc?.label ?? line),
+                        label: Text(persianDigits(svc?.label ?? line)),
                         onPressed: svc == null
                             ? null
                             : () {
@@ -397,6 +441,42 @@ class _TransitHomeState extends State<TransitHome> {
                       );
                     }).toList(),
                   ),
+                if (stop.mode != 'metro') ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.schedule_outlined),
+                      title: const Text('ساعت‌های حرکت و رسیدن اتوبوس'),
+                      subtitle: const Text('برای مشاهده، این بخش را باز کنید'),
+                      children: [
+                        if (stop.lines.isEmpty)
+                          const ListTile(
+                            title: Text('خط اتوبوسی ثبت نشده است'),
+                            subtitle: Text(
+                                'زمان حرکت از این ایستگاه در دسترس نیست.'),
+                          ),
+                        ...stop.lines.map((line) => ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.directions_bus_outlined),
+                          title: Text(persianDigits(
+                              network?.services[line]?.label ?? line)),
+                          subtitle: const Text(
+                              'ساعت حرکت و زمان رسیدن: در دسترس نیست'),
+                        )),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 4, 16, 14),
+                          child: Text(
+                            'هنوز به سرویس رسمی و مجاز زمان‌بندی یا '
+                            'موقعیت زنده اتوبوس متصل نیستیم؛ '
+                            'ساعتی حدس زده نمی‌شود.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Text('ایستگاه‌های نزدیک',
                     style: Theme.of(ctx).textTheme.titleMedium),
@@ -413,7 +493,7 @@ class _TransitHomeState extends State<TransitHome> {
                         color: _modeColor(near.mode)),
                     title: Text(near.name),
                     subtitle: Text(_modeName(near.mode) +
-                        ' · ' + meters.toString() + ' متر هوایی'),
+                        ' · ' + persianDigits(meters) + ' متر هوایی'),
                     onTap: () {
                       Navigator.pop(ctx);
                       _pickStop(near);
@@ -496,7 +576,7 @@ class _TransitHomeState extends State<TransitHome> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'مسیر پیشنهادی · ' + route.transfers.toString() +
+                  'مسیر پیشنهادی · ' + persianDigits(route.transfers) +
                       ' تعویض خط',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -504,7 +584,7 @@ class _TransitHomeState extends State<TransitHome> {
             ]),
             const SizedBox(height: 6),
             Text('پیاده‌روی بین ایستگاه‌ها: حدود ' +
-                route.walkingMeters.round().toString() + ' متر هوایی'),
+                persianDigits(route.walkingMeters.round()) + ' متر هوایی'),
             const SizedBox(height: 6),
             ...route.legs.map((leg) {
               final svc = network?.services[leg.service];
@@ -537,7 +617,7 @@ class _TransitHomeState extends State<TransitHome> {
     );
   }
 
-  String mathCount(int n) => n.toString();
+  String mathCount(int n) => persianDigits(n);
 
   Widget _pickButton(String kind, TransitStop? selected) {
     final active = routeTarget == kind;
@@ -774,6 +854,23 @@ class _TransitHomeState extends State<TransitHome> {
           title: const Text('رها تهران'),
           actions: [
             IconButton(
+              tooltip: offlineMap.installed
+                  ? 'نقشه آفلاین فعال است'
+                  : 'تنظیمات و نقشه آفلاین',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => RahaSettingsPage(
+                    offlineMap: offlineMap,
+                    themeMode: widget.themeMode,
+                    onThemeChanged: widget.onThemeModeChanged,
+                  ),
+                ),
+              ),
+              icon: Icon(offlineMap.installed
+                  ? Icons.offline_pin_outlined
+                  : Icons.settings_outlined),
+            ),
+            IconButton(
               tooltip: 'حالت روشن یا تاریک',
               onPressed: widget.onTheme,
               icon: const Icon(Icons.dark_mode_outlined),
@@ -804,10 +901,16 @@ class _TransitHomeState extends State<TransitHome> {
               onPositionChanged: _mapMoved,
             ),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'org.tehrantransit.tehran_transit',
-              ),
+              if (offlineMap.provider != null)
+                TileLayer(
+                  key: ValueKey('offline-' + (offlineMap.installedEdition ?? '')),
+                  tileProvider: offlineMap.provider!,
+                )
+              else
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'org.tehrantransit.tehran_transit',
+                ),
               PolylineLayer(
                 polylines: [
                   ...linesOnMap.map((f) {
@@ -944,6 +1047,8 @@ class _TransitHomeState extends State<TransitHome> {
     moveDelay?.cancel();
     query.dispose();
     map.dispose();
+    offlineMap.removeListener(_mapChanged);
+    offlineMap.dispose();
     db?.close();
     super.dispose();
   }

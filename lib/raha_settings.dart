@@ -165,16 +165,41 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                         'در صورت انتشار بسته جدید، آن را بررسی کنید.',
                       ),
                     ),
-                  if (!offline.downloadable)
+                  if (!offline.canCheck)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'انتشار فایل نقشه شهر با منبع و مجوز معتبر هنوز '
-                        'تکمیل نشده است. دکمه دانلود پس از آماده شدن '
-                        'بسته رسمی رها تهران فعال می‌شود. '
-                        'اطلاعات خطوط و ایستگاه‌ها هم‌اکنون آفلاین هستند.',
+                        'بسته معتبر و میزبانی‌شده نقشه تهران هنوز '
+                        'منتشر نشده است. فعلاً فقط خطوط و ایستگاه‌ها '
+                        'آفلاین‌اند؛ دکمه دانلود تا انتشار بسته غیرفعال است.',
                       ),
                     ),
+                  if (offline.canCheck && !offline.downloadable)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'ابتدا انتشار بسته جدید نقشه را بررسی کنید. '
+                        'دانلود خودکار نخواهد بود.',
+                      ),
+                    ),
+                  if (offline.canCheck)
+                    OutlinedButton.icon(
+                      onPressed: offline.checking || offline.busy
+                          ? null
+                          : () => offline.checkForUpdates(),
+                      icon: const Icon(Icons.sync),
+                      label: Text(offline.checking
+                          ? 'در حال بررسی نسخه…'
+                          : 'بررسی نسخه جدید نقشه'),
+                    ),
+                  if (offline.availableRelease != null)
+                    Text('نسخه منتشرشده: ' +
+                        persianDigits(offline.availableRelease!.edition) +
+                        (offline.updateAvailable
+                            ? ' · قابل به‌روزرسانی'
+                            : offline.installed
+                                ? ' · نصب‌شده'
+                                : ' · آماده دانلود')),
                   if (offline.busy) ...[
                     LinearProgressIndicator(value: offline.progress),
                     const SizedBox(height: 8),
@@ -191,7 +216,8 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                     ),
                   ] else ...[
                     FilledButton.icon(
-                      onPressed: offline.downloadable
+                      onPressed: offline.downloadable &&
+                              (!offline.installed || offline.updateAvailable)
                           ? () => offline.download()
                           : null,
                       icon: const Icon(Icons.download_for_offline_outlined),

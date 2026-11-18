@@ -30,3 +30,16 @@ These data are volunteer-maintained snapshots and are **not a certified current 
 The shipped GeoJSON and the compact source bus JSON are checked into the Git repository and validated by CI. GitHub Actions does **not** request Overpass to regenerate it. The bus SQLite is generated from the pinned ODbL snapshot `assets/data/tehran_bus_stations.json` (4,759 station records, including 9,511 position entries). This compact snapshot preserves the source names, coordinates and route-position information needed to reproduce the SQLite database. No transit dataset is downloaded during GitHub Actions builds. Flutter and Android tools are still downloaded as part of the build.
 
 To update geometry, explicitly fetch/review fresh upstream sources, regenerate features, validate positions and line coverage, and commit the updated GeoJSON with source revision metadata. Do **not** silently replace the pinned data with an unvalidated empty feed.
+
+## Multi-source expansion policy (mandatory)
+
+The project must not depend on a single dataset for coverage or accuracy. Before expanding the Tehran network, compare **multiple independently maintained sources**, including, where available and lawfully accessible:
+
+- Tehran Municipality and public transport operators' official route, station and timetable publications or authorized feeds (preferred for operating status and schedules).
+- OpenStreetMap/Geofabrik (stop locations, accessible route geometry, and cross-checking; retain OSM attribution).
+- Openly licensed metro, bus and BRT repositories and relevant community submissions, including current pinned sources.
+- Independently published datasets for stop accessibility, station connections, line direction and interchange information.
+
+For every imported feed, record the publisher, URL, snapshot/revision, retrieval date, license, coverage, coordinate validity, and known gaps. Normalize station and route identifiers; deduplicate carefully; resolve conflicting facts by **source reliability, recency and validation**, not arbitrary source order. Keep conflicting/unverified claims marked as uncertain instead of silently merging them. Verify real-world operational status against authoritative, recent evidence.
+
+Live arrival estimates must use a permitted, documented, genuinely available real-time source. Never fabricate arrival times or label scheduled times as live. If the service is unavailable, display “زمان رسیدن در دسترس نیست”. Do not bypass access controls or scrape prohibited endpoints. Preserve ODbL/SIL-OFL and any additional source-specific obligations, and validate data before updating offline APK snapshots.

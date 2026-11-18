@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'offline_map.dart';
+import 'raha_colors.dart';
 import 'persian_digits.dart';
 import 'raha_settings.dart';
 
@@ -31,11 +32,25 @@ class TehranTransit extends StatefulWidget {
 
 class _TehranTransitState extends State<TehranTransit> {
   ThemeMode mode = ThemeMode.system;
+  final RahaColors colors = RahaColors();
 
   @override
   void initState() {
     super.initState();
+    colors.addListener(_paletteChanged);
+    colors.load();
     _restoreTheme();
+  }
+
+  void _paletteChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    colors.removeListener(_paletteChanged);
+    colors.dispose();
+    super.dispose();
   }
 
   Future<void> _restoreTheme() async {
@@ -60,14 +75,14 @@ class _TehranTransitState extends State<TehranTransit> {
   Widget build(BuildContext context) {
     final light = ThemeData(
       useMaterial3: true,
-      colorSchemeSeed: const Color(0xff087d86),
+      colorSchemeSeed: colors.forPart('accent'),
       fontFamily: 'Vazir',
       scaffoldBackgroundColor: const Color(0xfff4f7f8),
     );
     final dark = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorSchemeSeed: const Color(0xff65d6d0),
+      colorSchemeSeed: colors.forPart('accent'),
       fontFamily: 'Vazir',
     );
     return MaterialApp(
@@ -88,6 +103,7 @@ class _TehranTransitState extends State<TehranTransit> {
             mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark),
         themeMode: mode,
         onThemeModeChanged: _changeTheme,
+        colors: colors,
       ),
     );
   }
@@ -104,11 +120,13 @@ class TransitHome extends StatefulWidget {
   final VoidCallback onTheme;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final RahaColors colors;
   const TransitHome({
     super.key,
     required this.onTheme,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.colors,
   });
   @override
   State<TransitHome> createState() => _TransitHomeState();
@@ -143,6 +161,7 @@ class _TransitHomeState extends State<TransitHome> {
   void initState() {
     super.initState();
     offlineMap.addListener(_mapChanged);
+    widget.colors.addListener(_mapChanged);
     offlineMap.initialize();
     _load();
   }
@@ -259,13 +278,10 @@ class _TransitHomeState extends State<TransitHome> {
     }
   }
 
-  Color _modeColor(String mode) {
-    if (mode == 'metro') return const Color(0xff2563eb);
-    if (mode == 'brt') return const Color(0xffe05648);
-    return const Color(0xff12916f);
-  }
+  Color _modeColor(String mode) => widget.colors.forPart(mode);
 
   Color _featureColor(_MapFeature f) {
+    if (!widget.colors.useSourceLineColors) return _modeColor(f.mode);
     final hex = f.color.replaceAll('#', '');
     if (RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) {
       return Color(int.parse('FF' + hex, radix: 16));
@@ -873,6 +889,7 @@ class _TransitHomeState extends State<TransitHome> {
                 MaterialPageRoute<void>(
                   builder: (_) => RahaSettingsPage(
                     offlineMap: offlineMap,
+                    colors: widget.colors,
                     themeMode: widget.themeMode,
                     onThemeChanged: widget.onThemeModeChanged,
                   ),
@@ -941,7 +958,7 @@ class _TransitHomeState extends State<TransitHome> {
                       showLines && selectedBusLine.length > 1)
                     Polyline(
                       points: selectedBusLine,
-                      color: const Color(0xff078969),
+                      color: _modeColor(selectedService?.mode ?? 'bus'),
                       strokeWidth: 5,
                     ),
                   if (currentPlan != null &&
@@ -949,7 +966,7 @@ class _TransitHomeState extends State<TransitHome> {
                     Polyline(
                       points:
                           currentPlan!.stops.map((s) => s.point).toList(),
-                      color: const Color(0xff763dd2),
+                      color: widget.colors.forPart('route'),
                       strokeWidth: 6,
                     ),
                 ],
@@ -1061,6 +1078,7 @@ class _TransitHomeState extends State<TransitHome> {
     map.dispose();
     offlineMap.removeListener(_mapChanged);
     offlineMap.dispose();
+    widget.colors.removeListener(_mapChanged);
     db?.close();
     super.dispose();
   }

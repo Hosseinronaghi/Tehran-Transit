@@ -268,6 +268,9 @@ class _TransitHomeState extends State<TransitHome> {
 
   Future<void> _chooseLine(TransitService service) async {
     setState(() {
+      if (service.mode == 'metro') metro = true;
+      if (service.mode == 'brt') brt = true;
+      if (service.mode == 'bus') bus = true;
       selectedService = service;
       selectedStop = null;
       currentPlan = null;
@@ -303,6 +306,9 @@ class _TransitHomeState extends State<TransitHome> {
   void _pickStop(TransitStop stop) {
     if (panel == 'route') {
       setState(() {
+        if (stop.mode == 'metro') metro = true;
+        if (stop.mode == 'brt') brt = true;
+        if (stop.mode == 'bus') bus = true;
         if (routeTarget == 'origin') {
           origin = stop;
           routeTarget = 'destination';
@@ -324,6 +330,9 @@ class _TransitHomeState extends State<TransitHome> {
       return;
     }
     setState(() {
+      if (stop.mode == 'metro') metro = true;
+      if (stop.mode == 'brt') brt = true;
+      if (stop.mode == 'bus') bus = true;
       selectedStop = stop;
       selectedService = null;
     });
@@ -595,6 +604,38 @@ class _TransitHomeState extends State<TransitHome> {
             const SizedBox(width: 8),
             _pickButton('destination', destination),
           ]),
+        ],
+        if (panel != 'route' && selectedService != null) ...[
+          const SizedBox(height: 4),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(_modeIcon(selectedService!.mode),
+                color: _modeColor(selectedService!.mode)),
+            title: Text(selectedService!.label),
+            subtitle: const Text('خط انتخاب‌شده روی نقشه'),
+            trailing: IconButton(
+              tooltip: 'حذف انتخاب خط',
+              icon: const Icon(Icons.close),
+              onPressed: () => setState(() {
+                selectedService = null;
+                selectedBusLine = [];
+              }),
+            ),
+          ),
+          if (selectedService!.routeId != null)
+            SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 'outbound', label: Text('رفت')),
+                ButtonSegment(value: 'inbound', label: Text('برگشت')),
+              ],
+              selected: {direction},
+              onSelectionChanged: (v) {
+                direction = v.first;
+                _chooseLine(selectedService!);
+              },
+            ),
         ],
         if (panel != 'route' && activeSelection != null) ...[
           const SizedBox(height: 5),

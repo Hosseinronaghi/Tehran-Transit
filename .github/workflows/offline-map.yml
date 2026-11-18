@@ -12,10 +12,11 @@ permissions:
 
 concurrency:
   group: tehran-offline-map-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   map:
+    if: false # Duplicate publisher disabled; use publish-offline-map.yml
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

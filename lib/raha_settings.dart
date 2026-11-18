@@ -19,9 +19,11 @@ class RahaSettingsPage extends StatefulWidget {
 
 class _RahaSettingsPageState extends State<RahaSettingsPage> {
   bool quarterlyReminder = true;
+  late ThemeMode selectedTheme;
   @override
   void initState() {
     super.initState();
+    selectedTheme = widget.themeMode;
     widget.offlineMap.addListener(_refresh);
     _readPrefs();
   }
@@ -125,9 +127,11 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                           icon: Icon(Icons.dark_mode_outlined),
                         ),
                       ],
-                      selected: {widget.themeMode},
-                      onSelectionChanged: (s) =>
-                          widget.onThemeChanged(s.first),
+                      selected: {selectedTheme},
+                      onSelectionChanged: (s) {
+                        setState(() => selectedTheme = s.first);
+                        widget.onThemeChanged(s.first);
+                      },
                     ),
                   ],
                 ),

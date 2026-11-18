@@ -30,6 +30,12 @@ jobs:
           cache: true
       - name: Generate Android project files
         run: flutter create --platforms=android --project-name tehran_transit --org org.tehrantransit .
+      - name: Remove generated Flutter demo test
+        run: |
+          if grep -q 'MyApp' test/widget_test.dart 2>/dev/null; then
+            rm test/widget_test.dart
+            echo 'Removed Flutter template test referencing non-existent MyApp'
+          fi
       - name: Allow map tile requests on Android
         run: |
           python3 - <<'PY'
@@ -44,11 +50,19 @@ jobs:
           PY
       - name: Install dependencies
         run: flutter pub get
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos
+      - name: Format and analyze app
+        run: |
+          dart format --output=none --set-exit-if-changed lib/ || true
+          flutter analyze --no-fatal-infos
       - name: Build APK
         run: flutter build apk --release
+      - name: Verify APK exists
+        run: |
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
       - uses: actions/upload-artifact@v4
         with:
           name: tehran-transit-apk
+          if-no-files-found: error
+          retention-days: 30
           path: build/app/outputs/flutter-apk/app-release.apk

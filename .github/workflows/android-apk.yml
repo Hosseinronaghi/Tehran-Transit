@@ -63,8 +63,8 @@ jobs:
         run: |
           dart format --output=none --set-exit-if-changed lib/ || true
           flutter analyze --no-fatal-infos
-      - name: Test route planner
-        run: flutter test test/route_engine_test.dart
+      - name: Run routing, Persian numeral and map manifest tests
+        run: flutter test
       - name: Build APK (retry transient Maven rate limiting)
         shell: bash
         env:

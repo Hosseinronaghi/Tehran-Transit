@@ -605,51 +605,6 @@ class _TransitHomeState extends State<TransitHome> {
             _pickButton('destination', destination),
           ]),
         ],
-        if (panel != 'route' && selectedService != null) ...[
-          const SizedBox(height: 4),
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(_modeIcon(selectedService!.mode),
-                color: _modeColor(selectedService!.mode)),
-            title: Text(selectedService!.label),
-            subtitle: const Text('خط انتخاب‌شده روی نقشه'),
-            trailing: IconButton(
-              tooltip: 'حذف انتخاب خط',
-              icon: const Icon(Icons.close),
-              onPressed: () => setState(() {
-                selectedService = null;
-                selectedBusLine = [];
-              }),
-            ),
-          ),
-          if (selectedService!.routeId != null)
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: 'outbound', label: Text('رفت')),
-                ButtonSegment(value: 'inbound', label: Text('برگشت')),
-              ],
-              selected: {direction},
-              onSelectionChanged: (v) {
-                direction = v.first;
-                _chooseLine(selectedService!);
-              },
-            ),
-        ],
-        if (panel != 'route' && activeSelection != null) ...[
-          const SizedBox(height: 5),
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: Text(activeSelection.name),
-            subtitle: Text(_modeName(activeSelection.mode) + ' · اطلاعات ایستگاه'),
-            trailing: TextButton(
-              onPressed: () => _stationDetails(activeSelection),
-              child: const Text('جزئیات'),
-            ),
-          ),
-        ],
         const SizedBox(height: 9),
         TextField(
           controller: query,
@@ -705,6 +660,51 @@ class _TransitHomeState extends State<TransitHome> {
           child: ListView(
             controller: scrolling,
             children: [
+        if (panel != 'route' && selectedService != null) ...[
+          const SizedBox(height: 4),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(_modeIcon(selectedService!.mode),
+                color: _modeColor(selectedService!.mode)),
+            title: Text(selectedService!.label),
+            subtitle: const Text('خط انتخاب‌شده روی نقشه'),
+            trailing: IconButton(
+              tooltip: 'حذف انتخاب خط',
+              icon: const Icon(Icons.close),
+              onPressed: () => setState(() {
+                selectedService = null;
+                selectedBusLine = [];
+              }),
+            ),
+          ),
+          if (selectedService!.routeId != null)
+            SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 'outbound', label: Text('رفت')),
+                ButtonSegment(value: 'inbound', label: Text('برگشت')),
+              ],
+              selected: {direction},
+              onSelectionChanged: (v) {
+                direction = v.first;
+                _chooseLine(selectedService!);
+              },
+            ),
+        ],
+        if (panel != 'route' && activeSelection != null) ...[
+          const SizedBox(height: 5),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(activeSelection.name),
+            subtitle: Text(_modeName(activeSelection.mode) + ' · اطلاعات ایستگاه'),
+            trailing: TextButton(
+              onPressed: () => _stationDetails(activeSelection),
+              child: const Text('جزئیات'),
+            ),
+          ),
+        ],
               if (panel == 'route' && origin != null && destination != null)
                 currentPlan == null
                     ? const Padding(

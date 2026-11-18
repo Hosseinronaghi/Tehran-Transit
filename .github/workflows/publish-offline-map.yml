@@ -41,8 +41,8 @@ jobs:
             iran-latest.osm.pbf tehran.mbtiles --minzoom 9 --maxzoom 15
       - name: Verify map pack and create SHA-256 release manifest
         env:
-          GITHUB_REPOSITORY: \${{ github.repository }}
-          GITHUB_RUN_NUMBER: \${{ github.run_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
           import json, hashlib, os, sqlite3, pathlib, datetime
@@ -76,7 +76,7 @@ jobs:
           PY
       - name: Publish map package before replacing manifest
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -101,3 +101,4 @@ jobs:
           path: |
             manifest.json
             map-asset-name.txt
+            tehran.mbtiles

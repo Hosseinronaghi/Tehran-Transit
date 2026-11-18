@@ -140,7 +140,6 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,

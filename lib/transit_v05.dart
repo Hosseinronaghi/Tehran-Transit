@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -152,13 +153,24 @@ class _TransitHomeState extends State<TransitHome> {
 
   Future<void> _load() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'tehran_transit_v05.sqlite'));
-      if (!await file.exists()) {
-        final asset = await rootBundle.load('assets/data/transit.sqlite');
-        await file.writeAsBytes(
-          asset.buffer.asUint8List(asset.offsetInBytes, asset.lengthInBytes),
-        );
+      // Refresh bundled transit data after an in-place APK update without
+      // deleting user settings or previously downloaded offline map packs.
+      final dir = await getApplicationSupportDirectory();
+      final file = File(p.join(dir.path, 'tehran_transit.sqlite'));
+      final checksumFile = File(file.path + '.sha256');
+      final asset = await rootBundle.load('assets/data/transit.sqlite');
+      final bytes = asset.buffer.asUint8List(
+        asset.offsetInBytes, asset.lengthInBytes);
+      final currentChecksum = sha256.convert(bytes).toString();
+      final cachedChecksum = await checksumFile.exists()
+          ? await checksumFile.readAsString()
+          : '';
+      if (!await file.exists() || cachedChecksum != currentChecksum) {
+        final pending = File(file.path + '.new');
+        await pending.writeAsBytes(bytes, flush: true);
+        if (await file.exists()) await file.delete();
+        await pending.rename(file.path);
+        await checksumFile.writeAsString(currentChecksum, flush: true);
       }
       final database = await openDatabase(file.path, readOnly: true);
       final text = await rootBundle.loadString('assets/data/rail_brt.geojson');

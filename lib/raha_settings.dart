@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'offline_map.dart';
+import 'raha_colors.dart';
 import 'persian_digits.dart';
 
 class RahaSettingsPage extends StatefulWidget {
   final OfflineMapController offlineMap;
+  final RahaColors colors;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   const RahaSettingsPage({
     super.key,
     required this.offlineMap,
+    required this.colors,
     required this.themeMode,
     required this.onThemeChanged,
   });
@@ -25,6 +28,7 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
     super.initState();
     selectedTheme = widget.themeMode;
     widget.offlineMap.addListener(_refresh);
+    widget.colors.addListener(_refresh);
     _readPrefs();
   }
 
@@ -59,6 +63,99 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
       ),
     );
     if (confirmed == true) await widget.offlineMap.remove();
+  }
+
+  Widget _colorRow(String key) {
+    final selected = widget.colors.forPart(key);
+    final title = RahaColors.labels[key] ?? key;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              for (final swatch in RahaColors.choices)
+                Tooltip(
+                  message: 'انتخاب رنگ برای ' + title,
+                  child: Semantics(
+                    button: true,
+                    selected: selected == swatch,
+                    label: 'انتخاب رنگ برای ' + title,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => widget.colors.setColor(key, swatch),
+                      child: Container(
+                        width: 37,
+                        height: 37,
+                        decoration: BoxDecoration(
+                          color: swatch,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected == swatch
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: selected == swatch
+                            ? const Icon(Icons.check, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadMap() async {
+    final offline = widget.offlineMap;
+    if (offline.busy || offline.checking || !offline.canCheck) return;
+    // One action first checks the official version manifest, then offers
+    // confirmation with the advertised size before any large download.
+    await offline.checkForUpdates();
+    if (!mounted || !offline.downloadable) return;
+    if (offline.installed && !offline.updateAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('جدیدترین نسخه نقشه روی گوشی موجود است.'),
+      ));
+      return;
+    }
+    final release = offline.availableRelease!;
+    final size = release.bytes == null
+        ? 'حجم دقیق توسط ناشر اعلام نشده است.'
+        : 'حجم تقریبی: ' +
+            persianDigits((release.bytes! / (1024 * 1024)).toStringAsFixed(1)) +
+            ' مگابایت';
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('دانلود نقشه تهران برای استفاده آفلاین'),
+        content: Text('نسخه ' + persianDigits(release.edition) +
+            '\n' + size +
+            '\nدانلود اختیاری است و فقط پس از تأیید شما شروع می‌شود.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('انصراف'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.download),
+            label: const Text('شروع دانلود'),
+          ),
+        ],
+      ),
+    );
+    if (approved == true) await offline.download();
   }
 
   Widget _heading(String text) => Padding(
@@ -137,6 +234,33 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                 ),
               ),
             ]),
+          ),
+          _heading('شخصی‌سازی رنگ‌ها'),
+          Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final key in RahaColors.labels.keys) _colorRow(key),
+                SwitchListTile.adaptive(
+                  title: const Text('رنگ اصلی هر خط مترو'),
+                  subtitle: const Text(
+                    'در صورت فعال‌بودن، رنگ ثبت‌شده منبع داده برای خطوط '
+                    'استفاده می‌شود؛ در غیر این صورت رنگ انتخابی شما.',
+                  ),
+                  value: widget.colors.useSourceLineColors,
+                  onChanged: (v) =>
+                      widget.colors.setUseSourceLineColors(v),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => widget.colors.reset(),
+                    icon: const Icon(Icons.restart_alt),
+                    label: const Text('بازنشانی رنگ‌های پیش‌فرض'),
+                  ),
+                ),
+              ],
+            ),
           ),
           _heading('نقشه کامل تهران بدون اینترنت'),
           Card(
@@ -220,9 +344,8 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                     ),
                   ] else ...[
                     FilledButton.icon(
-                      onPressed: offline.downloadable &&
-                              (!offline.installed || offline.updateAvailable)
-                          ? () => offline.download()
+                      onPressed: offline.canCheck && !offline.checking
+                          ? _downloadMap
                           : null,
                       icon: const Icon(Icons.download_for_offline_outlined),
                       label: Text(offline.installed
@@ -302,6 +425,7 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
   @override
   void dispose() {
     widget.offlineMap.removeListener(_refresh);
+    widget.colors.removeListener(_refresh);
     super.dispose();
   }
 }

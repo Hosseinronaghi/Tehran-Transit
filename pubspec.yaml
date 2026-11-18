@@ -23,6 +23,7 @@ flutter:
   assets:
     - assets/data/transit.sqlite
     - assets/data/rail_brt.geojson
+    - assets/fonts/OFL.txt
   fonts:
     - family: Vazir
       fonts:

@@ -125,7 +125,7 @@ class TransitNetwork {
                 : 1.2;
     final score = service == 'walk'
         ? meters * factor + 280
-        : math.max(meters, 85) * factor;
+        : math.max(meters, 85.0) * factor;
     (edges[from] ??= []).add(TransitLink(to, service, meters, score));
     if (both) {
       (edges[to] ??= []).add(TransitLink(from, service, meters, score));

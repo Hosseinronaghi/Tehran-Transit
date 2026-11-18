@@ -31,12 +31,14 @@ class _TehranTransitState extends State<TehranTransit> {
     final light = ThemeData(
       useMaterial3: true,
       colorSchemeSeed: const Color(0xff087d86),
+      fontFamily: 'Vazir',
       scaffoldBackgroundColor: const Color(0xfff4f7f8),
     );
     final dark = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorSchemeSeed: const Color(0xff65d6d0),
+      fontFamily: 'Vazir',
     );
     return MaterialApp(
       title: 'تهران ترانزیت',

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:latlong2/latlong.dart';
 import 'package:sqflite/sqflite.dart';
+import 'persian_digits.dart';
 
 class TransitStop {
   final String id, name, mode;
@@ -14,11 +15,11 @@ class TransitService {
   final String id, mode, code;
   final int? routeId;
   const TransitService(this.id, this.mode, this.code, [this.routeId]);
-  String get label => mode == 'metro'
+  String get label => persianDigits(mode == 'metro'
       ? 'مترو خط ' + code
       : mode == 'brt'
           ? 'BRT خط ' + code
-          : 'اتوبوس خط ' + code;
+          : 'اتوبوس خط ' + code);
 }
 
 class TransitLink {

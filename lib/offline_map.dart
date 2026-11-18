@@ -116,7 +116,7 @@ class OfflineMapController extends ChangeNotifier {
       final file = await _file();
       if (await file.exists()) {
         await _check(file);
-        provider = await MbTilesTileProvider.fromSource(file.path);
+        provider = MbTilesTileProvider.fromPath(path: file.path);
         installedBytes = await file.length();
         installedAt = await file.lastModified();
         final version = File(file.path + '.edition');
@@ -185,7 +185,7 @@ class OfflineMapController extends ChangeNotifier {
       await partial.rename(destination.path);
       final editionFile = File(destination.path + '.edition');
       await editionFile.writeAsString(release.edition, flush: true);
-      provider = await MbTilesTileProvider.fromSource(destination.path);
+      provider = MbTilesTileProvider.fromPath(path: destination.path);
       installedBytes = await destination.length();
       installedAt = await destination.lastModified();
       installedEdition = release.edition;
@@ -197,7 +197,7 @@ class OfflineMapController extends ChangeNotifier {
         try {
           final old = await _file();
           if (await old.exists()) {
-            provider = await MbTilesTileProvider.fromSource(old.path);
+            provider = MbTilesTileProvider.fromPath(path: old.path);
           }
         } catch (_) {}
       }

@@ -23,3 +23,10 @@ flutter:
   assets:
     - assets/data/transit.sqlite
     - assets/data/rail_brt.geojson
+  fonts:
+    - family: Vazir
+      fonts:
+        - asset: assets/fonts/Vazir-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Vazir-Bold.ttf
+          weight: 700

@@ -10,7 +10,8 @@ import 'package:sqflite/sqflite.dart';
 
 /// Manifest is published independently of the APK for quarterly map updates.
 /// Never fetch map tiles in bulk from the public OSM tile servers.
-const mapManifestUrl = String.fromEnvironment('RAHA_MAP_MANIFEST_URL');
+const mapManifestUrl = String.fromEnvironment('RAHA_MAP_MANIFEST_URL',
+    defaultValue: 'https://github.com/Hosseinronaghi/Tehran-Transit/releases/download/tehran-offline-maps/manifest.json');
 
 class MapRelease {
   final String edition, url, sha256;

@@ -6,3 +6,13 @@ android/.gradle/
 android/local.properties
 .idea/
 *.iml
+
+# Private signing credentials: never commit them
+*.jks
+*.keystore
+android/key.properties
+APP_SIGNING.txt
+
+# Large user-downloaded map packages and temporary downloads
+*.mbtiles
+*.mbtiles.part

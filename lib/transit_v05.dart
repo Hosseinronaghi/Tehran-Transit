@@ -573,7 +573,10 @@ class _TransitHomeState extends State<TransitHome> {
               : ' · ' +
                   stop.lines.take(3).map((s) =>
                       network?.services[s]?.label ?? s).join('، '))),
-      trailing: Icon(panel == 'route' ? Icons.add_circle_outline : Icons.chevron_left),
+      trailing: Icon(
+        panel == 'route' ? Icons.add_circle_outline : Icons.chevron_right,
+        textDirection: TextDirection.rtl,
+      ),
       onTap: () => _pickStop(stop),
     );
   }
@@ -585,7 +588,7 @@ class _TransitHomeState extends State<TransitHome> {
       leading: Icon(_modeIcon(service.mode), color: color),
       title: Text(service.label),
       subtitle: const Text('نمایش و برجسته‌سازی خط روی نقشه'),
-      trailing: const Icon(Icons.chevron_left),
+      trailing: const Icon(Icons.chevron_right, textDirection: TextDirection.rtl),
       selected: selectedService?.id == service.id,
       onTap: () => _chooseLine(service),
     );

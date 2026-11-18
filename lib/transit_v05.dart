@@ -573,7 +573,7 @@ class _TransitHomeState extends State<TransitHome> {
               : ' · ' +
                   stop.lines.take(3).map((s) =>
                       network?.services[s]?.label ?? s).join('، '))),
-      trailing: Icon(panel == 'route' ? Icons.add_circle_outline : Icons.chevron_left),
+      trailing: Icon(panel == 'route' ? Icons.add_circle_outline : Icons.chevron_right),
       onTap: () => _pickStop(stop),
     );
   }
@@ -585,7 +585,7 @@ class _TransitHomeState extends State<TransitHome> {
       leading: Icon(_modeIcon(service.mode), color: color),
       title: Text(service.label),
       subtitle: const Text('نمایش و برجسته‌سازی خط روی نقشه'),
-      trailing: const Icon(Icons.chevron_left),
+      trailing: const Icon(Icons.chevron_right),
       selected: selectedService?.id == service.id,
       onTap: () => _chooseLine(service),
     );
@@ -904,21 +904,7 @@ class _TransitHomeState extends State<TransitHome> {
               onPressed: widget.onTheme,
               icon: const Icon(Icons.dark_mode_outlined),
             ),
-            IconButton(
-              tooltip: 'درباره داده‌های نقشه',
-              onPressed: () => showAboutDialog(
-                context: context,
-                applicationName: 'رها تهران',
-                children: const [
-                  Text(
-                    'نسخه آزمایشی ۰.۵. مسیرها و فاصله‌ها شماتیک و '
-                    'تقریبی‌اند. داده‌ها از tehran-metro-data و '
-                    'tehran-bus-data با مجوز ODbL گرفته شده‌اند.',
-                  ),
-                ],
-              ),
-              icon: const Icon(Icons.info_outline),
-            ),
+
           ],
         ),
         body: Stack(children: [

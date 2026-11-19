@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'app_updates.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'offline_map.dart';
@@ -29,6 +31,7 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
   String updateFrequency = 'monthly';
   late ThemeMode selectedTheme;
   PackageInfo? packageInfo;
+  bool checkingApp = false;
   @override
   void initState() {
     super.initState();
@@ -52,6 +55,41 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
       autoUpdateCheck = prefs.getBool('raha_auto_update_check') ?? true;
       updateFrequency = prefs.getString('raha_update_frequency') ?? 'monthly';
     });
+  }
+
+  Future<void> _checkAppUpdate() async {
+    if (checkingApp) return;
+    setState(() => checkingApp = true);
+    try {
+      final update = await RahaAppUpdate.check(force: true);
+      if (!mounted) return;
+      if (update == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('نسخه جدید APK در انتشارهای معتبر پیدا نشد.')));
+      } else {
+        final approved = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('نسخه جدید رها تهران'),
+            content: Text('نسخه ' + persianDigits(update.version) +
+                ' منتشر شده است. دانلود و نصب فقط با انتخاب شما انجام می‌شود.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('بعداً')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('دریافت نسخه')),
+            ],
+          ),
+        );
+        if (approved == true) await launchUrl(update.downloadUrl,
+            mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('بررسی نسخه جدید فعلاً ممکن نیست.')));
+    } finally {
+      if (mounted) setState(() => checkingApp = false);
+    }
   }
 
   Future<void> _savePref(String key, Object value) async {
@@ -438,6 +476,14 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
               value: autoUpdateCheck,
               onChanged: (v) { setState(() => autoUpdateCheck = v);
                 _savePref('raha_auto_update_check', v); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.system_update),
+              title: const Text('بررسی نسخه جدید برنامه'),
+              subtitle: const Text('فقط APK منتشرشده در GitHub Releases'),
+              trailing: checkingApp ? const CircularProgressIndicator() :
+                  const Icon(Icons.chevron_left),
+              onTap: checkingApp ? null : _checkAppUpdate,
             ),
             ListTile(
               title: const Text('تناوب یادآوری به‌روزرسانی'),

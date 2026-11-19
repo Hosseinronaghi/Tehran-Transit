@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -138,6 +139,10 @@ class _TransitHomeState extends State<TransitHome> {
   final Distance distance = const Distance();
   final OfflineMapController offlineMap = OfflineMapController();
   Timer? moveDelay;
+  StreamSubscription<Position>? locationSubscription;
+  LatLng? myLocation;
+  bool locationEnabled = true, followingLocation = true;
+  String? locationStatus;
   Database? db;
   TransitNetwork? network;
   String? error;
@@ -164,6 +169,43 @@ class _TransitHomeState extends State<TransitHome> {
     widget.colors.addListener(_mapChanged);
     offlineMap.initialize();
     _load();
+    _startLocation();
+  }
+
+  Future<void> _startLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final enabled = prefs.getBool('raha_location_enabled') ?? true;
+    followingLocation = prefs.getBool('raha_follow_location') ?? true;
+    locationEnabled = enabled;
+    if (!enabled) return;
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (mounted) setState(() => locationStatus = 'مکان‌یابی دستگاه خاموش است');
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) setState(() => locationStatus = 'مجوز مکان‌یابی داده نشده است');
+      return;
+    }
+    await locationSubscription?.cancel();
+    locationSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 15,
+      ),
+    ).listen((position) {
+      if (!mounted) return;
+      final point = LatLng(position.latitude, position.longitude);
+      setState(() { myLocation = point; locationStatus = null; });
+      if (followingLocation) map.move(point, mapZoom < 14 ? 14 : mapZoom);
+    }, onError: (Object error) {
+      if (mounted) setState(() => locationStatus = 'موقعیت فعلاً در دسترس نیست');
+    });
   }
 
   void _mapChanged() {
@@ -328,6 +370,7 @@ class _TransitHomeState extends State<TransitHome> {
   }
 
   void _mapMoved(MapCamera camera, bool hasGesture) {
+    if (hasGesture) followingLocation = false;
     moveDelay?.cancel();
     moveDelay = Timer(const Duration(milliseconds: 150), () {
       if (!mounted) return;
@@ -594,6 +637,32 @@ class _TransitHomeState extends State<TransitHome> {
     );
   }
 
+  List<Widget> _groupedServices(List<TransitService> services) {
+    final metroServices = services.where((s) => s.mode == 'metro').toList();
+    final other = services.where((s) => s.mode != 'metro').toList();
+    if (metroServices.isEmpty) return other.map(_serviceTile).toList();
+    return [
+      ...metroServices.map((service) => ExpansionTile(
+        key: ValueKey('metro-line-' + service.code),
+        leading: Icon(Icons.train, color: _modeColor('metro')),
+        title: Text(service.label),
+        subtitle: Text(persianDigits(
+            allStops.where((s) => s.mode == 'metro' &&
+                s.lines.contains(service.id)).length) + ' ایستگاه'),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.route),
+            title: const Text('نمایش خط روی نقشه'),
+            onTap: () => _chooseLine(service),
+          ),
+          ...allStops.where((s) => s.mode == 'metro' &&
+              s.lines.contains(service.id)).map(_stationTile),
+        ],
+      )),
+      ...other.map(_serviceTile),
+    ];
+  }
+
   Widget _routeSummary(TransitPlan route) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -827,7 +896,7 @@ class _TransitHomeState extends State<TransitHome> {
                       )
                     : _routeSummary(currentPlan!),
               if (panel == 'lines')
-                ...serviceResults.map(_serviceTile)
+                ..._groupedServices(serviceResults)
               else
                 ...stationResults.map(_stationTile),
               if (panel != 'lines' && query.text.isEmpty)
@@ -888,7 +957,8 @@ class _TransitHomeState extends State<TransitHome> {
               tooltip: offlineMap.installed
                   ? 'نقشه آفلاین فعال است'
                   : 'تنظیمات و نقشه آفلاین',
-              onPressed: () => Navigator.of(context).push(
+              onPressed: () async {
+                await Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => RahaSettingsPage(
                     offlineMap: offlineMap,
@@ -897,7 +967,11 @@ class _TransitHomeState extends State<TransitHome> {
                     onThemeChanged: widget.onThemeModeChanged,
                   ),
                 ),
-              ),
+              );
+                await locationSubscription?.cancel();
+                locationSubscription = null;
+                if (mounted) { setState(() { myLocation = null; }); await _startLocation(); }
+              },
               icon: Icon(offlineMap.installed
                   ? Icons.offline_pin_outlined
                   : Icons.settings_outlined),
@@ -961,6 +1035,12 @@ class _TransitHomeState extends State<TransitHome> {
                 ],
               ),
               MarkerLayer(markers: [
+                if (myLocation != null && locationEnabled)
+                  Marker(
+                    point: myLocation!, width: 42, height: 42,
+                    child: const Icon(Icons.my_location, size: 30,
+                      color: Color(0xff007cda)),
+                  ),
                 ...stationFeatures.map((f) {
                   final stopId =
                       (f.mode == 'metro' ? 'metro:' : 'bus:') + f.id;
@@ -1010,6 +1090,23 @@ class _TransitHomeState extends State<TransitHome> {
                 TextSourceAttribution('© OpenStreetMap contributors'),
               ]),
             ],
+          ),
+          Positioned(
+            bottom: 15,
+            left: 12,
+            child: FloatingActionButton.small(
+              heroTag: 'locate',
+              tooltip: 'موقعیت من',
+              onPressed: () async {
+                followingLocation = true;
+                if (myLocation != null) {
+                  map.move(myLocation!, 15);
+                } else {
+                  await _startLocation();
+                }
+              },
+              child: Icon(followingLocation ? Icons.my_location : Icons.location_searching),
+            ),
           ),
           Positioned(
             top: 10,
@@ -1063,6 +1160,7 @@ class _TransitHomeState extends State<TransitHome> {
   @override
   void dispose() {
     moveDelay?.cancel();
+    locationSubscription?.cancel();
     query.dispose();
     map.dispose();
     offlineMap.removeListener(_mapChanged);

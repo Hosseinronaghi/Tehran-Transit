@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'app_updates.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -170,6 +172,32 @@ class _TransitHomeState extends State<TransitHome> {
     offlineMap.initialize();
     _load();
     _startLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAppOnOpen());
+  }
+
+  Future<void> _checkAppOnOpen() async {
+    try {
+      final update = await RahaAppUpdate.check();
+      if (!mounted || update == null) return;
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('به‌روزرسانی رها تهران'),
+          content: Text('نسخه ' + persianDigits(update.version) +
+              ' موجود است. آیا صفحه دانلود باز شود؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('بعداً')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('دریافت')),
+          ],
+        ),
+      );
+      if (accepted == true) await launchUrl(update.downloadUrl,
+          mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Startup must never fail because update checks are unavailable.
+    }
   }
 
   Future<void> _startLocation() async {

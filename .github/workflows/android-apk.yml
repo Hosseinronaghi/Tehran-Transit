@@ -43,9 +43,15 @@ jobs:
           path=Path('android/app/src/main/AndroidManifest.xml')
           text=path.read_text()
           permission='<uses-permission android:name="android.permission.INTERNET" />'
+          location_permission='<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />'
+          coarse_permission='<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />'
           if permission not in text:
               at=text.index('>')
               text=text[:at+1]+chr(10)+'    '+permission+text[at+1:]
+          for perm in (location_permission, coarse_permission):
+              if perm not in text:
+                  at=text.index('>')
+                  text=text[:at+1]+chr(10)+'    '+perm+text[at+1:]
           import re
           text=re.sub(r'android:label="[^"]+"', 'android:label="رها تهران"', text, count=1)
           path.write_text(text)

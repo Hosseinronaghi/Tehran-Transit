@@ -23,6 +23,10 @@ class RahaSettingsPage extends StatefulWidget {
 
 class _RahaSettingsPageState extends State<RahaSettingsPage> {
   bool quarterlyReminder = true;
+  bool locationEnabled = true;
+  bool followLocation = true;
+  bool autoUpdateCheck = true;
+  String updateFrequency = 'monthly';
   late ThemeMode selectedTheme;
   PackageInfo? packageInfo;
   @override
@@ -43,7 +47,17 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) setState(() {
       quarterlyReminder = prefs.getBool('raha_quarterly_map_reminder') ?? true;
+      locationEnabled = prefs.getBool('raha_location_enabled') ?? true;
+      followLocation = prefs.getBool('raha_follow_location') ?? true;
+      autoUpdateCheck = prefs.getBool('raha_auto_update_check') ?? true;
+      updateFrequency = prefs.getString('raha_update_frequency') ?? 'monthly';
     });
+  }
+
+  Future<void> _savePref(String key, Object value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value is bool) await prefs.setBool(key, value);
+    if (value is String) await prefs.setString(key, value);
   }
 
   void _refresh() {
@@ -242,9 +256,13 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
               ),
             ]),
           ),
-          _heading('شخصی‌سازی رنگ‌ها'),
           Card(
-            child: Column(
+            child: ExpansionTile(
+              leading: const Icon(Icons.palette_outlined),
+              title: const Text('شخصی‌سازی رنگ‌ها'),
+              subtitle: const Text('برای نمایش گزینه‌های رنگ باز کنید'),
+              children: [
+                Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final key in RahaColors.labels.keys) _colorRow(key),
@@ -265,6 +283,8 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
                     icon: const Icon(Icons.restart_alt),
                     label: const Text('بازنشانی رنگ‌های پیش‌فرض'),
                   ),
+                ),
+              ],
                 ),
               ],
             ),
@@ -391,6 +411,52 @@ class _RahaSettingsPageState extends State<RahaSettingsPage> {
               },
             ),
           ),
+          _heading('موقعیت مکانی'),
+          Card(child: Column(children: [
+            SwitchListTile.adaptive(
+              title: const Text('نمایش موقعیت زنده من'),
+              subtitle: const Text('فقط هنگام استفاده از نقشه و پس از اجازه اندروید'),
+              value: locationEnabled,
+              onChanged: (v) { setState(() => locationEnabled = v);
+                _savePref('raha_location_enabled', v); },
+            ),
+            SwitchListTile.adaptive(
+              title: const Text('دنبال‌کردن موقعیت'),
+              subtitle: const Text('با حرکت دستی نقشه متوقف می‌شود'),
+              value: followLocation,
+              onChanged: locationEnabled ? (v) {
+                setState(() => followLocation = v);
+                _savePref('raha_follow_location', v);
+              } : null,
+            ),
+          ])),
+          _heading('به‌روزرسانی برنامه'),
+          Card(child: Column(children: [
+            SwitchListTile.adaptive(
+              title: const Text('بررسی خودکار نسخه جدید'),
+              subtitle: const Text('بررسی دوره‌ای هنگام باز کردن برنامه؛ بدون نصب اجباری'),
+              value: autoUpdateCheck,
+              onChanged: (v) { setState(() => autoUpdateCheck = v);
+                _savePref('raha_auto_update_check', v); },
+            ),
+            ListTile(
+              title: const Text('تناوب یادآوری به‌روزرسانی'),
+              trailing: DropdownButton<String>(
+                value: updateFrequency,
+                items: const [
+                  DropdownMenuItem(value: 'weekly', child: Text('هفتگی')),
+                  DropdownMenuItem(value: 'monthly', child: Text('ماهانه')),
+                  DropdownMenuItem(value: 'quarterly', child: Text('فصلی')),
+                  DropdownMenuItem(value: 'off', child: Text('خاموش')),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => updateFrequency = v);
+                  _savePref('raha_update_frequency', v);
+                },
+              ),
+            ),
+          ])),
           _heading('حرکت اتوبوس و BRT'),
           const Card(
             child: ListTile(

@@ -1,7 +1,7 @@
 name: tehran_transit
 description: Persian-first Tehran bus transit app
 publish_to: none
-version: 0.6.2+8
+version: 0.6.3+9
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
@@ -18,6 +18,7 @@ dependencies:
   shared_preferences: ^2.5.3
   package_info_plus: ^8.3.1
   crypto: ^3.0.6
+  geolocator: ^13.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

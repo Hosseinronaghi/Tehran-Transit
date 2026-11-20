@@ -8,11 +8,13 @@ data = json.loads(source.read_text(encoding='utf-8'))
 if target.exists(): target.unlink()
 db = sqlite3.connect(target)
 db.executescript("""
+PRAGMA foreign_keys=ON;
 CREATE TABLE stations(id INTEGER PRIMARY KEY, name_fa TEXT NOT NULL, latitude REAL, longitude REAL);
 CREATE TABLE routes(id INTEGER PRIMARY KEY, route_code TEXT NOT NULL, name_fa TEXT NOT NULL, mode TEXT NOT NULL);
-CREATE TABLE route_variants(id INTEGER PRIMARY KEY, route_id INTEGER NOT NULL, direction TEXT NOT NULL);
-CREATE TABLE route_stops(route_variant_id INTEGER NOT NULL, station_id INTEGER NOT NULL, stop_sequence INTEGER NOT NULL);
-CREATE INDEX idx_stops_variant ON route_stops(route_variant_id,stop_sequence);
+CREATE TABLE route_variants(id INTEGER PRIMARY KEY, route_id INTEGER NOT NULL REFERENCES routes(id), direction TEXT NOT NULL);
+CREATE TABLE route_stops(route_variant_id INTEGER NOT NULL REFERENCES route_variants(id), station_id INTEGER NOT NULL REFERENCES stations(id), stop_sequence INTEGER NOT NULL);
+CREATE UNIQUE INDEX idx_stops_variant ON route_stops(route_variant_id,stop_sequence);
+CREATE UNIQUE INDEX idx_line_direction ON route_variants(route_id,direction);
 """)
 for key, item in data.items():
     try: lat=float(item.get('latitude')); lon=float(item.get('longitude'))
@@ -20,7 +22,7 @@ for key, item in data.items():
     db.execute("INSERT INTO stations VALUES (?,?,?,?)",(int(key),item.get('name') or 'بدون نام',lat,lon))
 lines = sorted({int(p['line']) for s in data.values() for p in s.get('positions',[])})
 for line in lines:
-    mode = 'brt' if 101 <= line <= 110 or 121 <= line <= 171 else 'regular'
+    mode = 'brt' if 101 <= line <= 110 or 121 <= line <= 171 or 901 <= line <= 910 else 'regular'
     db.execute("INSERT INTO routes VALUES (?,?,?,?)",(line,str(line),f'خط {line}',mode))
 groups={}
 for key,item in data.items():

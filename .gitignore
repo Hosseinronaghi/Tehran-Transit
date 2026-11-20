@@ -16,3 +16,8 @@ APP_SIGNING.txt
 # Large user-downloaded map packages and temporary downloads
 *.mbtiles
 *.mbtiles.part
+
+# Bundled database is generated from the pinned source JSON before building.
+assets/data/transit.sqlite
+.flutter-plugins-dependencies
+.metadata

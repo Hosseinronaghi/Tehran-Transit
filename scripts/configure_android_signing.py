@@ -17,7 +17,10 @@ keys = (
 supplied = [bool(os.getenv(x)) for x in keys]
 gradle = Path("android/app/build.gradle.kts")
 if not gradle.exists():
-    raise RuntimeError("Expected Flutter-generated android/app/build.gradle.kts")
+    raise RuntimeError("Expected android/app/build.gradle.kts")
+
+if os.getenv("RAHA_REQUIRE_RELEASE_SIGNING") == "1" and not all(supplied):
+    raise RuntimeError("Stable APK publication requires all four signing secrets.")
 
 if not any(supplied):
     print("::warning::No stable Android signing key configured. "
@@ -47,7 +50,7 @@ keystore.chmod(0o600)
 text = gradle.read_text(encoding="utf-8")
 original = 'signingConfig = signingConfigs.getByName("debug")'
 if original not in text:
-    raise RuntimeError("Flutter-generated release signing block changed")
+    raise RuntimeError("Android release signing block changed")
 block = '''
     signingConfigs {
         create("rahaRelease") {

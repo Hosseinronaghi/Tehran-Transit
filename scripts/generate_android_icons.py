@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build launcher icons for Android from the original Raha Tehran vector logo.
 
-Run AFTER flutter create because Flutter generates/overwrites Android resources.
+Update the checked-in Android drawable resources from the source artwork.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ SIZES = {
 
 def main() -> None:
     if not SOURCE.is_file() or not RES.is_dir():
-        raise SystemExit("Missing SVG logo or Flutter-generated Android project")
+        raise SystemExit("Missing SVG logo or Android project")
 
     svg = SOURCE.read_bytes()
     png = cairosvg.svg2png(

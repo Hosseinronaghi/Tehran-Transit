@@ -110,7 +110,7 @@ jobs:
           grep -F "package: name='org.tehrantransit.tehran_transit' versionCode='$code' versionName='$name'" apk-badging.txt
           "$tools/apksigner" verify --print-certs "$apk" > apk-signing.txt
           if [ "$PUBLISH" = 'true' ]; then
-            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' apk-signing.txt)"
+            actual="$(sed -En 's/^(Signer #[0-9]+|V[0-9]+ Signer:) certificate SHA-256 digest: ([[:xdigit:]]{64})$/\2/p' apk-signing.txt | tr '[:upper:]' '[:lower:]' | sort -u)"
             expected="$(printf '%s' "$EXPECTED_SIGNER" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
             [[ "$expected" =~ ^[0-9a-f]{64}$ && "$expected" == "$actual" ]]
             ! grep -q 'CN=Android Debug' apk-signing.txt

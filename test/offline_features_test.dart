@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
@@ -145,6 +144,7 @@ void main() {
     expect(edited.manual, isTrue);
     expect(timetableTime(edited.departure!), '۰۷:۴۲');
     await restored.delete(edited.id!);
+    expect(await restored.importRows(parsed), 0);
     expect(await restored.forStop('bus:42'), isEmpty);
     await restored.dispose();
   });

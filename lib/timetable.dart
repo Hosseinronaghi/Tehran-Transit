@@ -162,43 +162,71 @@ List<TimetableEntry> parseTimetable(String text) {
 class TimetableStore {
   Future<Database>? _database;
 
-  Future<Database> _open() => _database ??= _openDatabase();
+  Future<Database> _open() async {
+    final pending = _database ??= _openDatabase();
+    try {
+      return await pending;
+    } catch (_) {
+      if (identical(_database, pending)) _database = null;
+      rethrow;
+    }
+  }
 
   Future<Database> _openDatabase() async {
     final dir = await getApplicationSupportDirectory();
-    final seed = parseTimetable(
-      await rootBundle.loadString('assets/data/timetable.json'),
-    );
-    return openDatabase(
+    final db = await openDatabase(
       p.join(dir.path, 'timetable.sqlite'),
-      version: 1,
+      version: 2,
       onCreate: (db, _) async {
         await db.execute('''CREATE TABLE timetable (
           id INTEGER PRIMARY KEY, stop TEXT NOT NULL, service TEXT NOT NULL,
           direction TEXT NOT NULL, days INTEGER NOT NULL, arrival INTEGER,
           departure INTEGER, notes TEXT NOT NULL, source TEXT NOT NULL,
-          manual INTEGER NOT NULL, origin TEXT UNIQUE
+          manual INTEGER NOT NULL, origin TEXT UNIQUE, deleted INTEGER NOT NULL DEFAULT 0
         )''');
         await db.execute(
           'CREATE INDEX timetable_station ON timetable(stop, service)',
         );
-        final batch = db.batch();
-        for (final row in seed) {
+        await db.execute('CREATE TABLE dataset (sha256 TEXT NOT NULL)');
+      },
+      onUpgrade: (db, old, _) async {
+        if (old < 2) {
+          await db.execute(
+            'ALTER TABLE timetable ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute('CREATE TABLE dataset (sha256 TEXT NOT NULL)');
+        }
+      },
+    );
+    try {
+      final seed = await rootBundle.loadString('assets/data/timetable.json');
+      final checksum = sha256.convert(utf8.encode(seed)).toString();
+      await db.transaction((tx) async {
+        final current = await tx.query('dataset', limit: 1);
+        if (current.firstOrNull?['sha256'] == checksum) return;
+        final batch = tx.batch();
+        for (final row in parseTimetable(seed)) {
           batch.insert(
             'timetable',
             row.toImportedRow(),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
+        batch.delete('dataset');
+        batch.insert('dataset', {'sha256': checksum});
         await batch.commit(noResult: true);
-      },
-    );
+      });
+      return db;
+    } catch (_) {
+      await db.close();
+      rethrow;
+    }
   }
 
   Future<List<TimetableEntry>> forStop(String stop) async {
     final rows = await (await _open()).query(
       'timetable',
-      where: 'stop = ?',
+      where: 'stop = ? AND deleted = 0',
       whereArgs: [stop],
       orderBy: 'COALESCE(arrival, departure), service, id',
     );
@@ -217,7 +245,20 @@ class TimetableStore {
   }
 
   Future<void> delete(int id) async {
-    await (await _open()).delete('timetable', where: 'id = ?', whereArgs: [id]);
+    final db = await _open();
+    await db.transaction((tx) async {
+      await tx.delete(
+        'timetable',
+        where: 'id = ? AND origin IS NULL',
+        whereArgs: [id],
+      );
+      await tx.update(
+        'timetable',
+        {'deleted': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   Future<int> importRows(List<TimetableEntry> rows) async {
